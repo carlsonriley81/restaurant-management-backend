@@ -16,11 +16,15 @@ const navItems = [
   { label: 'Inventory', href: ROUTES.inventory },
   { label: 'Prep', href: ROUTES.prep },
   { label: 'Reports', href: ROUTES.reports },
+  { label: 'Kitchen', href: '/kitchen' },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+
+  // The KDS layout provides its own full-screen chrome.
+  if (pathname?.startsWith('/kitchen')) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
