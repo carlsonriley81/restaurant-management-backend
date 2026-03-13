@@ -1,98 +1,348 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🍽️ Restaurant Management Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A complete, production-ready open-source backend for restaurant management platforms built with **NestJS**, **PostgreSQL** (via Prisma ORM), **Socket.io** WebSockets, **BullMQ** background jobs, and **JWT** authentication with RBAC.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## ✨ Features
 
-## Description
+- **18 REST API Modules** — orders, menu, inventory, kitchen, tables, reservations, and more
+- **Real-time WebSockets** — Socket.io events for orders, kitchen, tables, and inventory
+- **Background Jobs** — BullMQ + Redis for async processing
+- **JWT Auth + RBAC** — Access tokens (15min), refresh tokens (7d), role-based access control
+- **Swagger Docs** — Interactive API docs at `/api/docs`
+- **Docker** — Dockerfile + docker-compose with Postgres + Redis
+- **Prisma ORM** — Full PostgreSQL schema with migrations and seed data
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 🏗️ Architecture
 
-```bash
-$ npm install
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Restaurant Management API                     │
+├────────────┬───────────┬───────────────┬────────────────────────┤
+│  POS App   │  Waiter   │    Kitchen    │     Admin Panel        │
+│  (tablet)  │  (mobile) │   Display     │     (web)              │
+└─────┬──────┴─────┬─────┴───────┬───────┴──────────┬─────────────┘
+      │            │             │                  │
+      └────────────┴─────────────┴──────────────────┘
+                          │
+                   NestJS REST API
+                   Socket.io Gateway
+                          │
+           ┌──────────────┼──────────────┐
+           │              │              │
+      PostgreSQL        Redis         File
+      (Prisma)        (BullMQ)      Storage
 ```
 
-## Compile and run the project
+---
+
+## 🗂️ Modules
+
+| Module | Endpoint | Description |
+|---|---|---|
+| `auth` | `/api/auth` | JWT login/register/refresh/logout |
+| `menu` | `/api/menu` | Menu items CRUD + categories |
+| `orders` | `/api/orders` | Order lifecycle + payment |
+| `inventory` | `/api/inventory` | Stock tracking + alerts |
+| `kitchen` | `/api/kitchen` | Kitchen display tickets |
+| `tables` | `/api/tables` | Floor plan + table status |
+| `employees` | `/api/employees` | HR + scheduling |
+| `payroll` | `/api/payroll` | Pay stubs + hours |
+| `recipes` | `/api/recipes` | Recipe management + scaling |
+| `prep` | `/api/prep` | Prep log + inventory deduction |
+| `trucks` | `/api/trucks` | Delivery tracking |
+| `reservations` | `/api/reservations` | Booking system |
+| `discounts` | `/api/discounts` | Promo codes + validation |
+| `reports` | `/api/reports` | Sales/inventory/employee reports |
+| `pos` | `/api/pos` | POS dashboard + stats |
+| `waitstaff` | `/api/waitstaff` | Server-scoped view |
+| `receipts` | `/api/receipts` | Receipt generation |
+| `notifications` | `/api/notifications` | Role-based alerts |
+
+---
+
+## 🔐 Roles
+
+| Role | Access |
+|---|---|
+| `ADMIN` | Full system access |
+| `MANAGER` | All except system config |
+| `CHEF` | Kitchen, orders, inventory |
+| `SERVER` | Tables, orders, waitstaff |
+| `CASHIER` | POS, orders, discounts |
+| `DRIVER` | Trucks, deliveries |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 16+
+- Redis 7+
+
+### 1. Clone & install
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/carlsonriley81/restaurant-management-backend.git
+cd restaurant-management-backend
+npm install
 ```
 
-## Run tests
+### 2. Configure environment
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
+# Edit .env with your database and Redis settings
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 3. Database setup
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npx prisma generate
+npx prisma migrate dev --name init
+npm run prisma:seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 4. Start the server
 
-## Resources
+```bash
+# Development
+npm run start:dev
 
-Check out a few resources that may come in handy when working with NestJS:
+# Production
+npm run build && npm run start:prod
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+API: `http://localhost:3000/api`  
+Swagger: `http://localhost:3000/api/docs`
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🐳 Docker
 
-## Stay in touch
+```bash
+# Start all services
+docker-compose up -d
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# With pgAdmin (localhost:5050)
+docker-compose --profile tools up -d
 
-## License
+# View logs
+docker-compose logs -f api
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+## 📡 API Examples (curl)
+
+### Authentication
+
+```bash
+# Login (seed credentials)
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@restaurant.com", "password": "admin123"}'
+
+# Register new employee
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "John", "lastName": "Doe",
+    "email": "john@restaurant.com",
+    "password": "password123",
+    "role": "SERVER", "hourlyWage": 12
+  }'
+
+# Refresh access token
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "YOUR_REFRESH_TOKEN"}'
+```
+
+### Menu
+
+```bash
+# List menu items
+curl http://localhost:3000/api/menu -H "Authorization: Bearer TOKEN"
+
+# Filter by category
+curl "http://localhost:3000/api/menu?category=Burgers" -H "Authorization: Bearer TOKEN"
+
+# Create menu item
+curl -X POST http://localhost:3000/api/menu \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Classic Burger","price":12.99,"category":"Burgers","active":true}'
+```
+
+### Orders
+
+```bash
+# Create order
+curl -X POST http://localhost:3000/api/orders \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{
+    "tableId": "TABLE_ID",
+    "customerName": "Jane Smith",
+    "items": [{"menuItemId": "ITEM_ID", "quantity": 2}]
+  }'
+
+# Update status
+curl -X PATCH http://localhost:3000/api/orders/ORDER_ID/status \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"status": "ACCEPTED"}'
+
+# Process payment
+curl -X POST http://localhost:3000/api/orders/ORDER_ID/payment \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"paymentMethod": "CREDIT", "tipAmount": 5.00}'
+```
+
+### Inventory
+
+```bash
+# List inventory
+curl http://localhost:3000/api/inventory -H "Authorization: Bearer TOKEN"
+
+# Low stock items
+curl "http://localhost:3000/api/inventory?lowStock=true" -H "Authorization: Bearer TOKEN"
+
+# Adjust quantity
+curl -X PATCH http://localhost:3000/api/inventory/ITEM_ID/quantity \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"quantity": 25}'
+```
+
+### Tables
+
+```bash
+# Get all tables
+curl http://localhost:3000/api/tables -H "Authorization: Bearer TOKEN"
+
+# Update table status
+curl -X PATCH http://localhost:3000/api/tables/TABLE_ID/status \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"status": "SEATED"}'
+```
+
+### Reports
+
+```bash
+# Sales report
+curl "http://localhost:3000/api/reports/sales?period=daily" \
+  -H "Authorization: Bearer TOKEN"
+
+# Inventory report
+curl http://localhost:3000/api/reports/inventory \
+  -H "Authorization: Bearer TOKEN"
+```
+
+---
+
+## ⚡ WebSocket Events
+
+Connect to `ws://localhost:3000/events`:
+
+```javascript
+const socket = io('http://localhost:3000/events', {
+  auth: { token: 'YOUR_JWT_TOKEN' }
+});
+
+// Listen for events
+socket.on('order.updated', ({ orderId, status }) => console.log(orderId, status));
+socket.on('kitchen.ticket.new', ({ orderId, items }) => console.log('New ticket:', orderId));
+socket.on('table.updated', ({ tableId, status }) => console.log('Table:', tableId, status));
+socket.on('inventory.low_stock', ({ productName, quantityOnHand }) => console.warn('Low:', productName));
+socket.on('reservation.reminder', (data) => console.log('Reminder:', data));
+socket.on('notification.new', ({ title, message }) => alert(`${title}: ${message}`));
+```
+
+### Events Reference
+
+| Event | Trigger | Roles |
+|---|---|---|
+| `order.updated` | Order status change | All |
+| `kitchen.ticket.new` | New order placed | CHEF, ADMIN, MANAGER |
+| `table.updated` | Table status change | All |
+| `inventory.low_stock` | Stock below threshold | ADMIN, MANAGER |
+| `reservation.reminder` | Upcoming reservation | ADMIN, MANAGER, SERVER |
+| `notification.new` | New notification | Targeted role |
+
+---
+
+## 🧪 Testing
+
+```bash
+npm run test          # Unit tests
+npm run test:cov      # With coverage
+npm run test:e2e      # End-to-end tests
+npm run test:watch    # Watch mode
+```
+
+---
+
+## 🗄️ Database Schema
+
+18 Prisma models: `Employee`, `RefreshToken`, `MenuItem`, `Recipe`, `RecipeIngredient`, `InventoryItem`, `Order`, `OrderItem`, `KitchenTicket`, `Table`, `Reservation`, `ReservationTable`, `Discount`, `PrepLog`, `PrepLogInventory`, `Truck`, `TruckItem`, `Shift`, `Payroll`, `Receipt`, `Notification`
+
+```bash
+npx prisma migrate dev --name <migration-name>  # Create migration
+npx prisma migrate deploy                        # Deploy (production)
+npx prisma studio                                # Visual database explorer
+```
+
+---
+
+## 🌱 Seed Data
+
+Run `npm run prisma:seed` to populate:
+
+| Account | Email | Password | Role |
+|---|---|---|---|
+| Admin | admin@restaurant.com | admin123 | ADMIN |
+| Manager | manager@restaurant.com | manager123 | MANAGER |
+| Chef | chef@restaurant.com | chef123 | CHEF |
+| Server | server@restaurant.com | server123 | SERVER |
+
+Also creates: 10 tables, 18 inventory items, 3 recipes, 10 menu items, 4 discount codes.
+
+---
+
+## 📁 Project Structure
+
+```
+src/
+├── common/           # Guards, filters, interceptors, decorators
+├── config/           # Configuration
+├── gateway/          # Socket.io WebSocket gateway
+├── modules/          # 18 feature modules
+│   ├── auth/
+│   ├── discounts/
+│   ├── employees/
+│   ├── inventory/
+│   ├── kitchen/
+│   ├── menu/
+│   ├── notifications/
+│   ├── orders/
+│   ├── payroll/
+│   ├── pos/
+│   ├── prep/
+│   ├── receipts/
+│   ├── recipes/
+│   ├── reports/
+│   ├── reservations/
+│   ├── tables/
+│   ├── trucks/
+│   └── waitstaff/
+└── prisma/           # PrismaService
+prisma/
+├── schema.prisma     # Database schema
+└── seed.ts           # Sample data
+```
+
+---
+
+## 📖 License
+
+MIT — Open source, free to use.
