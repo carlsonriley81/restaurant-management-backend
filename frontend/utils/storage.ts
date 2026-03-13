@@ -38,4 +38,8 @@ export const STORAGE_KEYS = {
   refreshToken: 'refresh_token',
   user: 'user',
   offlineQueue: 'offline_queue',
+  // Kitchen Display System
+  kitchenSettings: 'kitchen_settings',
+  kitchenOfflineQueue: 'kitchen_offline_queue',
+  kitchenTicketCache: 'kitchen_ticket_cache',
 } as const;

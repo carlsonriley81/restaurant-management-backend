@@ -161,6 +161,10 @@ Events subscribed and their effects:
 | `/inventory` | Stock & expiry tracking |
 | `/prep` | Kitchen prep logging |
 | `/reports` | Sales analytics with Recharts |
+| `/kitchen` | **Kitchen Display System (KDS)** |
+| `/kitchen/settings` | KDS settings panel |
+| `/kitchen/ticket-view/:orderId` | Dedicated full-screen ticket focus |
+| `/kitchen/recipe-view/:recipeId` | Full-screen recipe viewer |
 
 ---
 
@@ -211,7 +215,6 @@ The `useOfflineQueue` hook (`hooks/useOfflineQueue.ts`) provides:
 
 | Platform | Notes |
 |---|---|
-| **Kitchen Display System (KDS)** | `/kitchen` route — subscribe to `order.created`, show tickets fullscreen |
 | **Waiter Mobile App** | PWA with `/tables` and `/orders` — add `manifest.json` + service worker |
 | **Admin Dashboard** | Add `/admin` route group, role-guarded to `admin`/`manager` |
 | **Online Ordering** | Public-facing `/order` route, no auth required, connects to same API |
@@ -220,7 +223,94 @@ The `useOfflineQueue` hook (`hooks/useOfflineQueue.ts`) provides:
 
 ---
 
-## Development Notes
+## Kitchen Display System (KDS)
+
+The KDS is a full-screen, touchscreen-first interface for kitchen staff at `/kitchen`.
+
+### Features
+
+- **Live ticket board** — shows all active orders as large colored cards
+- **Color-coded status** — gray (new), yellow (preparing), green (ready), red/flashing (overdue), blue (completed)
+- **Live timers** — elapsed time + countdown to due time on every ticket
+- **Priority badges** — Normal / ⚡ Rush / ⭐ VIP / 🍽 Large Order
+- **Station filtering** — Grill / Fryer / Salad / Dessert / Drinks / Prep / Bar
+- **Recipe viewer** — tap a menu item to open full-screen recipe with ingredients + instructions
+- **Sound alerts** — beep on new order, overdue, or rush order (Web Audio API)
+- **Offline mode** — caches tickets in localStorage; queues start/ready/complete actions and replays on reconnect
+- **Settings panel** at `/kitchen/settings` — station filter, sound toggles, layout density, ticket size, dark mode (persisted to localStorage)
+
+### Navigation
+
+The KDS layout intentionally hides the global `TopNav` so the entire screen is used for tickets. The `KitchenHeader` provides a minimal clock, ticket counts, mute toggle, connection indicator, and link to settings.
+
+### WebSocket events
+
+Both naming conventions are supported for compatibility with different backend versions:
+
+| Dot format | Underscore format | Effect |
+|---|---|---|
+| `order.created` | `order_created` | New ticket added to board, sound played |
+| `order.updated` | `order_updated` | Ticket updated in place |
+| `order.cancelled` | `order_cancelled` | Ticket removed from board |
+| `order.ready` | `order_ready` | Ticket status updated |
+
+### API endpoints used
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/orders/active` | Load all active tickets on mount |
+| `PUT` | `/orders/:id/status` | Update order status (preparing / ready / served / completed) |
+| `GET` | `/recipes/:id` | Fetch recipe details for the viewer |
+| `POST` | `/kitchen/start` | Notify backend to begin prep (deducts inventory) |
+| `POST` | `/kitchen/complete` | Notify backend of completion (tracks usage) |
+
+### Env vars (no additions needed)
+
+The KDS uses the same env vars as the rest of the frontend:
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3000/api/v1` | Backend REST API |
+| `NEXT_PUBLIC_WS_URL` | `http://localhost:3000` | WebSocket server |
+
+### Offline mode behavior
+
+1. When the browser goes offline, a banner appears on the KDS board.
+2. Any Start / Ready / Complete action is **queued** in `localStorage` (`rms_kitchen_offline_queue`).
+3. Active tickets are **cached** to `localStorage` (`rms_kitchen_ticket_cache`).
+4. On reconnect the queue is **replayed** sequentially; failures halt the replay until the next online cycle.
+5. The cache is loaded as fallback if the API fails on mount.
+
+### Folder structure additions
+
+```
+frontend/
+  app/kitchen/
+    layout.tsx                        # Full-screen KDS layout (no TopNav)
+    page.tsx                          # Main KDS board
+    settings/page.tsx                 # Settings panel
+    ticket-view/[orderId]/page.tsx    # Dedicated ticket focus view
+    recipe-view/[recipeId]/page.tsx   # Full-screen recipe viewer
+  components/kitchen/
+    KitchenHeader.tsx                 # Sticky header: clock, counts, mute, settings link
+    KitchenTicket.tsx                 # Single ticket card with status buttons
+    TicketTimer.tsx                   # Live elapsed / remaining countdown
+    RecipeViewer.tsx                  # Full-screen recipe overlay
+    StationFilter.tsx                 # Station pill filter bar
+    OrderStatusBadge.tsx              # Colored status label
+    SoundAlert.tsx                    # Web Audio API beep sequences
+    TicketGrid.tsx                    # Responsive grid sorted by urgency
+  services/
+    kitchen.api.ts                    # Axios methods for KDS endpoints
+  stores/
+    kitchenStore.ts                   # Zustand store with offline queue + localStorage settings
+  types/
+    kitchen.ts                        # KDS TypeScript types
+```
+
+---
+
+
 
 - Sample data (`utils/sampleData.ts`) is used as fallback when the API is unreachable — useful for frontend development without the backend running.
 - All API service functions return Axios `AxiosResponse<T>` — use `.data` to access the payload.
