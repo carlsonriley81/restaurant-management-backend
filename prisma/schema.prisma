@@ -1,0 +1,425 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  CHEF
+  SERVER
+  CASHIER
+  DRIVER
+}
+
+enum OrderStatus {
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT
+  DEBIT
+  MOBILE_PAY
+  GIFT_CARD
+}
+
+enum TableStatus {
+  AVAILABLE
+  SEATED
+  ORDERING
+  FOOD_PREPARING
+  SERVED
+  PAID
+}
+
+enum TruckStatus {
+  SCHEDULED
+  IN_TRANSIT
+  ARRIVED
+  UNLOADING
+  COMPLETED
+  CANCELLED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum KitchenTicketStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  DELIVERED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum ReportType {
+  SALES_DAILY
+  SALES_WEEKLY
+  SALES_MONTHLY
+  INVENTORY_LOW_STOCK
+  INVENTORY_WASTE
+  INVENTORY_EXPIRATION
+  EMPLOYEE_HOURS
+  EMPLOYEE_PAYROLL
+  EMPLOYEE_TIPS
+  KITCHEN_PREP
+  KITCHEN_ORDERED
+  KITCHEN_INGREDIENTS
+}
+
+model Employee {
+  id               String         @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String         @unique
+  passwordHash     String
+  role             Role
+  hourlyWage       Decimal        @db.Decimal(10, 2)
+  contactInfo      Json?
+  emergencyContact Json?
+  payrollDetails   Json?
+  hireDate         DateTime       @default(now())
+  status           EmployeeStatus @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  refreshTokens    RefreshToken[]
+  shifts           Shift[]
+  payrolls         Payroll[]
+  assignedOrders   Order[]        @relation("ChefOrders")
+  servedOrders     Order[]        @relation("ServerOrders")
+  assignedTables   Table[]
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model MenuItem {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  image       String?
+  active      Boolean  @default(true)
+  limitedTime Boolean  @default(false)
+  recipeId    String?
+  recipe      Recipe?  @relation(fields: [recipeId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+model Recipe {
+  id             String              @id @default(uuid())
+  dishName       String
+  dishImage      String?
+  limitedTime    Boolean             @default(false)
+  servingSize    Int                 @default(1)
+  instructions   String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  ingredients    RecipeIngredient[]
+  menuItems      MenuItem[]
+}
+
+model RecipeIngredient {
+  id             String        @id @default(uuid())
+  recipeId       String
+  recipe         Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  inventoryId    String
+  inventory      InventoryItem @relation(fields: [inventoryId], references: [id])
+  ingredientName String
+  amount         Decimal       @db.Decimal(10, 4)
+  unit           String
+}
+
+model InventoryItem {
+  id               String    @id @default(uuid())
+  productName      String
+  quantityOnHand   Decimal   @db.Decimal(10, 4)
+  unit             String    @default("units")
+  lowStockThreshold Decimal  @db.Decimal(10, 4) @default(10)
+  lastReceivedDate DateTime?
+  incomingQuantity Decimal?  @db.Decimal(10, 4)
+  incomingEta      DateTime?
+  supplierName     String?
+  costToOrder      Decimal?  @db.Decimal(10, 2)
+  expirationDate   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  recipeIngredients RecipeIngredient[]
+  prepLogs          PrepLogInventory[]
+  truckItems        TruckItem[]
+}
+
+model Table {
+  id             String      @id @default(uuid())
+  tableNumber    Int         @unique
+  capacity       Int
+  status         TableStatus @default(AVAILABLE)
+  color          String?
+  positionX      Float?
+  positionY      Float?
+  serverId       String?
+  server         Employee?   @relation(fields: [serverId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  orders         Order[]
+  reservations   ReservationTable[]
+}
+
+model Order {
+  id                String        @id @default(uuid())
+  orderStatus       OrderStatus   @default(PLACED)
+  orderPlacedTime   DateTime      @default(now())
+  estimatedWaitTime Int?
+  chefId            String?
+  chef              Employee?     @relation("ChefOrders", fields: [chefId], references: [id])
+  serverId          String?
+  server            Employee?     @relation("ServerOrders", fields: [serverId], references: [id])
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentMethod     PaymentMethod?
+  tableId           String?
+  table             Table?        @relation(fields: [tableId], references: [id])
+  customerName      String?
+  customerPhone     String?
+  customerEmail     String?
+  totalPrice        Decimal       @db.Decimal(10, 2) @default(0)
+  discountId        String?
+  discount          Discount?     @relation(fields: [discountId], references: [id])
+  discountAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  tipAmount         Decimal       @db.Decimal(10, 2) @default(0)
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  items             OrderItem[]
+  kitchenTicket     KitchenTicket?
+  receipt           Receipt?
+  payroll           Payroll[]
+}
+
+model OrderItem {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId   String
+  menuItem     MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+model KitchenTicket {
+  id            String              @id @default(uuid())
+  orderId       String              @unique
+  order         Order               @relation(fields: [orderId], references: [id])
+  timeDue       DateTime?
+  timeOrdered   DateTime            @default(now())
+  estimatedTime Int?
+  status        KitchenTicketStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model PrepLog {
+  id               String    @id @default(uuid())
+  itemPrepped      String
+  servingsCreated  Decimal   @db.Decimal(10, 2)
+  servingsUsed     Decimal   @db.Decimal(10, 2) @default(0)
+  datePrepped      DateTime  @default(now())
+  usedFor          String?
+  requiredServings Decimal?  @db.Decimal(10, 2)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  inventoryUsed    PrepLogInventory[]
+}
+
+model PrepLogInventory {
+  id            String        @id @default(uuid())
+  prepLogId     String
+  prepLog       PrepLog       @relation(fields: [prepLogId], references: [id], onDelete: Cascade)
+  inventoryId   String
+  inventory     InventoryItem @relation(fields: [inventoryId], references: [id])
+  amountUsed    Decimal       @db.Decimal(10, 4)
+  unit          String
+}
+
+model Truck {
+  id                String      @id @default(uuid())
+  truckNumber       String
+  arrivalDate       DateTime?
+  estimatedArrival  DateTime?
+  freightType       String?
+  status            TruckStatus @default(SCHEDULED)
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  items             TruckItem[]
+}
+
+model TruckItem {
+  id            String        @id @default(uuid())
+  truckId       String
+  truck         Truck         @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  inventoryId   String?
+  inventory     InventoryItem? @relation(fields: [inventoryId], references: [id])
+  productName   String
+  quantity      Decimal       @db.Decimal(10, 4)
+  unit          String        @default("units")
+  unitCost      Decimal?      @db.Decimal(10, 2)
+  received      Boolean       @default(false)
+}
+
+model Discount {
+  id           String       @id @default(uuid())
+  name         String
+  type         DiscountType
+  percentage   Decimal?     @db.Decimal(5, 2)
+  fixedAmount  Decimal?     @db.Decimal(10, 2)
+  active       Boolean      @default(true)
+  startDate    DateTime?
+  endDate      DateTime?
+  maxUses      Int?
+  usedCount    Int          @default(0)
+  code         String?      @unique
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  orders       Order[]
+}
+
+model Reservation {
+  id              String            @id @default(uuid())
+  reservationName String
+  reservationTime DateTime
+  reservationType String?
+  partySize       Int
+  requestedMenu   Json?
+  paymentStatus   PaymentStatus     @default(PENDING)
+  depositPaid     Decimal           @db.Decimal(10, 2) @default(0)
+  status          ReservationStatus @default(PENDING)
+  notes           String?
+  customerPhone   String?
+  customerEmail   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  tables          ReservationTable[]
+}
+
+model ReservationTable {
+  id            String      @id @default(uuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  tableId       String
+  table         Table       @relation(fields: [tableId], references: [id])
+}
+
+model Shift {
+  id          String    @id @default(uuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  startTime   DateTime
+  endTime     DateTime?
+  hoursWorked Decimal?  @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Payroll {
+  id            String   @id @default(uuid())
+  employeeId    String
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id])
+  periodStart   DateTime
+  periodEnd     DateTime
+  hoursWorked   Decimal  @db.Decimal(10, 2)
+  hourlyRate    Decimal  @db.Decimal(10, 2)
+  grossPay      Decimal  @db.Decimal(10, 2)
+  tips          Decimal  @db.Decimal(10, 2) @default(0)
+  deductions    Decimal  @db.Decimal(10, 2) @default(0)
+  netPay        Decimal  @db.Decimal(10, 2)
+  paid          Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Receipt {
+  id            String        @id @default(uuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  discountAmount Decimal      @db.Decimal(10, 2) @default(0)
+  tipAmount     Decimal       @db.Decimal(10, 2) @default(0)
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod?
+  paymentStatus PaymentStatus @default(PENDING)
+  receiptData   Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  type        String
+  targetRole  Role?
+  targetId    String?
+  read        Boolean  @default(false)
+  data        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
