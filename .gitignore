@@ -7,6 +7,8 @@
 /frontend/.next
 /frontend/out
 /frontend/.env.local
+/frontend/next-env.d.ts
+/frontend/tsconfig.tsbuildinfo
 
 # OS
 .DS_Store
